@@ -1,5 +1,5 @@
 // 静态资源离线缓存。改动任何前端文件后必须把 VERSION 加 1，否则手机还在用旧缓存
-const VERSION = 'review-v1';
+const VERSION = 'review-v2';
 const ASSETS = [
   './',
   './index.html',

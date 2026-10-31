@@ -58,7 +58,7 @@ export function planQueue(knowledgeList, ranges, random = Math.random) {
 }
 
 export function masteryLabel(mastery) {
-  if (mastery === DISCARDED) return { text: '废弃', tone: 'discard' };
-  if (mastery === MASTERED) return { text: '熟练', tone: 'mastered' };
-  return { text: '熟练度 ' + mastery, tone: 'due' };
+  if (mastery === DISCARDED) return { text: '🙈 废弃', tone: 'discard' };
+  if (mastery === MASTERED) return { text: '🏆 熟练', tone: 'mastered' };
+  return { text: '⭐ ' + mastery, tone: 'due' };
 }

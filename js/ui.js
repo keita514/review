@@ -6,6 +6,9 @@ const app = document.getElementById('app');
 const toastEl = document.getElementById('toast');
 const modalEl = document.getElementById('modal');
 
+const OWNER_EMOJI = { tina: '🦄', kaka: '🚀' };
+const TYPE_EMOJI = { word: '🔤', math: '🔢', scene: '🌍' };
+
 let objectUrls = new Set();
 let lastQuery = '';
 let form = null;
@@ -119,32 +122,41 @@ function openViewer(url) {
 export async function renderHome() {
   const [tinaPlan, kakaPlan] = await Promise.all(store.OWNERS.map(o => store.getPlan(o.id)));
   const plans = { tina: tinaPlan, kaka: kakaPlan };
+  const cards = store.OWNERS.map(o => {
+    const plan = plans[o.id];
+    const total = plan.queue.length;
+    const done = Math.min(plan.progress, total);
+    const left = Math.max(total - done, 0);
+    const finished = total > 0 && left === 0;
+    const meta = !total
+      ? '还没有复习计划'
+      : finished ? '全部看完啦，真棒！' : `还剩 ${left} 张 · 已复习 ${done}/${total}`;
+    return `
+      <section class="owner-card owner-${o.id}">
+        <div class="owner-head">
+          <div class="owner-avatar">${OWNER_EMOJI[o.id] || '🐣'}</div>
+          <div>
+            <div class="owner-name">${esc(o.name)}</div>
+            <div class="owner-meta">${esc(meta)}</div>
+          </div>
+        </div>
+        <div class="owner-actions">
+          <a class="btn btn-play" href="#/review/${o.id}">${finished ? '再看一遍' : '继续复习'} ▶</a>
+          <a class="btn btn-round" href="#/restart/${o.id}" aria-label="重新开始">↻</a>
+        </div>
+      </section>`;
+  }).join('');
   setPage(`
     <div class="page">
-      <header class="topbar"><h1>复习工具</h1></header>
-      <main class="content">
-        <div class="stack">
-          <a class="btn btn-primary" href="#/new">＋ 知识新增</a>
-          <a class="btn btn-outline" href="#/manage">≡ 知识维护</a>
+      <header class="topbar"><h1>复习工具 🎈</h1></header>
+      <main class="content home">
+        <div class="home-actions">
+          <a class="btn btn-add" href="#/new">➕ 知识新增</a>
+          <a class="btn btn-soft" href="#/manage">🗂️ 知识维护</a>
         </div>
-        ${store.OWNERS.map(o => {
-          const plan = plans[o.id];
-          const total = plan.queue.length;
-          const done = Math.min(plan.progress, total);
-          return `
-          <section class="owner-block">
-            <div class="owner-label">${esc(o.name)}</div>
-            <div class="btn-row">
-              <a class="btn btn-primary" href="#/review/${o.id}">
-                ${total && done >= total ? '已复习完' : '继续复习'}
-                <span class="btn-sub">${total ? `${done} / ${total}` : '—'}</span>
-              </a>
-              <a class="btn btn-outline" href="#/restart/${o.id}">重新开始</a>
-            </div>
-          </section>`;
-        }).join('')}
+        <div class="owner-list">${cards}</div>
       </main>
-      <footer class="footer-link"><a href="#/backup">备份与恢复</a></footer>
+      <footer class="footer-link"><a href="#/backup">💾 备份与恢复</a></footer>
     </div>
   `);
 }
@@ -180,40 +192,40 @@ export async function renderForm(id) {
       </header>
       <main class="content form">
         <label class="field">
-          <span class="field-label">归属</span>
+          <span class="field-label">👧 归属</span>
           <select id="f-owner" ${editing ? 'disabled' : ''}>
             ${store.OWNERS.map(o => `<option value="${o.id}" ${o.id === form.owner ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}
           </select>
           ${editing ? '<span class="hint">归属不能修改</span>' : ''}
         </label>
         <label class="field">
-          <span class="field-label">类型</span>
+          <span class="field-label">🏷️ 类型</span>
           <select id="f-type">
             ${store.TYPES.map(t => `<option value="${t.id}" ${knowledge && knowledge.type === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}
           </select>
         </label>
         <label class="field">
-          <span class="field-label">知识名 *</span>
+          <span class="field-label">✏️ 知识名 *</span>
           <input id="f-name" type="text" autocomplete="off" placeholder="例如 apple" value="${esc(knowledge ? knowledge.name : '')}">
           <span class="hint">可用输入法的语音键直接说</span>
         </label>
         <div class="field">
-          <span class="field-label">知识内容</span>
+          <span class="field-label">📖 知识内容</span>
           <textarea id="f-text" rows="4" placeholder="释义、例句、备注……">${esc(knowledge ? knowledge.text : '')}</textarea>
         </div>
         <div class="field">
-          <span class="field-label">图片（<span id="img-count">0</span>/6）</span>
+          <span class="field-label">🖼️ 图片（<span id="img-count">0</span>/6）</span>
           <div class="thumbs" id="thumbs"></div>
           <div class="btn-row">
             <button class="btn btn-outline" id="btn-photo" type="button">📷 拍照</button>
-            <button class="btn btn-outline" id="btn-hand" type="button">✎ 手写</button>
+            <button class="btn btn-outline" id="btn-hand" type="button">✍️ 手写</button>
           </div>
           <input type="file" id="file-input" accept="image/*" hidden>
         </div>
         <p class="form-error" id="form-error" hidden></p>
       </main>
       <div class="bottombar">
-        <button class="btn btn-primary btn-block" id="btn-save" type="button">${editing ? '保存修改' : '保存'}</button>
+        <button class="btn btn-primary btn-block" id="btn-save" type="button">${editing ? '✔️ 保存修改' : '✔️ 保存'}</button>
       </div>
     </div>
   `);
@@ -316,7 +328,7 @@ export async function renderManage() {
         <span class="topbar-meta">共 ${list.length} 条</span>
       </header>
       <main class="content list-page">
-        <input class="search" id="q" type="search" placeholder="搜索知识名" value="${esc(lastQuery)}">
+        <input class="search" id="q" type="search" placeholder="🔍 搜一搜知识名" value="${esc(lastQuery)}">
         <ul class="klist" id="klist"></ul>
       </main>
     </div>
@@ -327,11 +339,11 @@ export async function renderManage() {
     const query = lastQuery.trim().toLowerCase();
     const filtered = query ? list.filter(k => k.name.toLowerCase().includes(query)) : list;
     if (!list.length) {
-      listEl.innerHTML = '<li class="empty">还没有知识，去首页点「知识新增」</li>';
+      listEl.innerHTML = '<li class="empty">🧺 这里空空的<br>去首页点「知识新增」吧</li>';
       return;
     }
     if (!filtered.length) {
-      listEl.innerHTML = `<li class="empty">没有匹配「${esc(lastQuery)}」的知识</li>`;
+      listEl.innerHTML = `<li class="empty">🔍 没有找到「${esc(lastQuery)}」</li>`;
       return;
     }
     listEl.innerHTML = filtered.map(k => {
@@ -340,7 +352,7 @@ export async function renderManage() {
       <li class="krow" data-id="${esc(k.id)}">
         <div class="krow-main">
           <div class="krow-name">${esc(k.name)}</div>
-          <div class="krow-sub">${esc(store.ownerName(k.owner))} · ${fmtDate(k.createdAt)} · ${esc(store.typeName(k.type))}${k.imageIds.length ? ` · 🖼 ${k.imageIds.length}` : ''}</div>
+          <div class="krow-sub">${OWNER_EMOJI[k.owner] || ''} ${esc(store.ownerName(k.owner))} · ${fmtDate(k.createdAt)} · ${esc(store.typeName(k.type))}${k.imageIds.length ? ` · 🖼 ${k.imageIds.length}` : ''}</div>
         </div>
         <span class="chip chip-${label.tone}">${esc(label.text)}</span>
         <button class="more" data-more="${esc(k.id)}" aria-label="更多操作" type="button">⋯</button>
@@ -372,10 +384,10 @@ async function openRowActions(id) {
   const knowledge = await store.getKnowledge(id);
   if (!knowledge) return;
   const value = await actionSheet(knowledge.name, [
-    { text: '编辑', value: 'edit' },
-    { text: '设为熟练', value: 'master' },
-    { text: '废弃', value: 'discard' },
-    { text: '删除', value: 'delete', kind: 'danger' },
+    { text: '✏️ 编辑', value: 'edit' },
+    { text: '🏆 设为熟练', value: 'master' },
+    { text: '🙈 废弃', value: 'discard' },
+    { text: '🗑️ 删除', value: 'delete', kind: 'danger' },
   ]);
   if (value === 'edit') {
     location.hash = '#/edit/' + id;
@@ -416,9 +428,9 @@ export async function renderRestart(owner) {
   const state = { owner, ranges: { due: true, discarded: false, mastered: false } };
 
   const rows = [
-    ['due', '需复习（0–10）'],
-    ['discarded', '废弃（-1）'],
-    ['mastered', '熟练（100）'],
+    ['due', '🔥 需复习（0–10）'],
+    ['discarded', '🙈 废弃（-1）'],
+    ['mastered', '🏆 熟练（100）'],
   ];
 
   setPage(`
@@ -429,13 +441,13 @@ export async function renderRestart(owner) {
       </header>
       <main class="content form">
         <label class="field">
-          <span class="field-label">复习计划</span>
+          <span class="field-label">👦 复习计划</span>
           <select id="r-owner">
             ${store.OWNERS.map(o => `<option value="${o.id}" ${o.id === owner ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}
           </select>
         </label>
         <div class="field">
-          <span class="field-label">选择范围（可多选）</span>
+          <span class="field-label">✅ 选择范围（可多选）</span>
           <div class="check-list" id="ranges">
             ${rows.map(([key, label]) => `
               <label class="check-row">
@@ -462,7 +474,7 @@ export async function renderRestart(owner) {
     document.getElementById('count-discarded').textContent = `${c.discarded} 条`;
     document.getElementById('count-mastered').textContent = `${c.mastered} 条`;
     const total = (state.ranges.due ? c.due : 0) + (state.ranges.discarded ? c.discarded : 0) + (state.ranges.mastered ? c.mastered : 0);
-    summaryEl.innerHTML = `将重建「${esc(store.ownerName(state.owner))}」的复习计划<br>共 ${total} 条，进度从 0 开始`;
+    summaryEl.innerHTML = `✨ 将重建「${esc(store.ownerName(state.owner))}」的复习计划<br>共 ${total} 条，进度从 0 开始`;
     btn.disabled = total === 0;
   };
 
@@ -517,27 +529,30 @@ export async function renderReview(owner) {
   let expanded = false;
   const label = masteryLabel(knowledge.mastery);
   const actions = isDue(knowledge.mastery)
-    ? `<button class="btn act-unknown" data-action="unknown" type="button">✕ 不会</button>
-       <button class="btn act-know" data-action="know" type="button">✓ 会</button>
+    ? `<button class="btn act-unknown" data-action="unknown" type="button">❌ 不会</button>
+       <button class="btn act-know" data-action="know" type="button">✅ 会</button>
        <button class="btn act-text" data-action="discard" type="button">废弃</button>`
-    : `<button class="btn act-know" data-action="know" type="button">✓ 会</button>
+    : `<button class="btn act-know" data-action="know" type="button">✅ 会</button>
        <button class="btn act-text" data-action="relearn" type="button">重新复习</button>`;
 
   setPage(`
     <div class="page review">
       <header class="topbar">
         <a class="back" href="#/">←</a>
-        <h1>${esc(store.ownerName(owner))}</h1>
+        <h1>${OWNER_EMOJI[owner] || ''} ${esc(store.ownerName(owner))}</h1>
         <span class="topbar-meta">${plan.progress} / ${total}</span>
       </header>
-      <div class="progress"><i style="width:${(plan.progress / total) * 100}%"></i></div>
+      <div class="progress-wrap"><div class="progress"><i style="width:${(plan.progress / total) * 100}%"></i></div></div>
       <main class="content review-body">
-        <button class="card-name" id="card-name" type="button" aria-expanded="false">${esc(knowledge.name)}</button>
-        <div class="card-tip" id="card-tip">点一下看内容</div>
-        <div class="card-content" id="card-content" hidden>
-          ${knowledge.text ? `<p class="card-text">${esc(knowledge.text)}</p>` : ''}
-          <div class="card-images" id="card-images"></div>
-          ${!knowledge.text && !knowledge.imageIds.length ? '<p class="muted">无内容</p>' : ''}
+        <div class="card-wrap">
+          <div class="buddy">${TYPE_EMOJI[knowledge.type] || '📚'}</div>
+          <button class="card-name" id="card-name" type="button" aria-expanded="false">${esc(knowledge.name)}</button>
+          <div class="card-tip" id="card-tip">👆 点一下看内容</div>
+          <div class="card-content" id="card-content" hidden>
+            ${knowledge.text ? `<p class="card-text">${esc(knowledge.text)}</p>` : ''}
+            <div class="card-images" id="card-images"></div>
+            ${!knowledge.text && !knowledge.imageIds.length ? '<p class="muted">还没有写内容哦</p>' : ''}
+          </div>
         </div>
         <div class="card-state"><span class="chip chip-${label.tone}">${esc(label.text)}</span></div>
       </main>
@@ -567,7 +582,7 @@ export async function renderReview(owner) {
     expanded = !expanded;
     contentEl.hidden = !expanded;
     nameEl.setAttribute('aria-expanded', String(expanded));
-    tipEl.textContent = expanded ? '点一下收起' : '点一下看内容';
+    tipEl.textContent = expanded ? '👆 点一下收起' : '👆 点一下看内容';
   };
   nameEl.onclick = toggle;
 
@@ -594,10 +609,11 @@ function renderReviewEmpty(owner) {
         <h1>${esc(store.ownerName(owner))}</h1>
       </header>
       <main class="content center-box">
+        <div class="done-emoji">🧩</div>
         <p class="done-title">还没有复习计划</p>
-        <p class="muted">先选择范围，生成一份复习计划。</p>
-        <a class="btn btn-primary btn-block" href="#/restart/${owner}">去重新开始</a>
-        <a class="btn btn-outline btn-block" href="#/">回首页</a>
+        <p class="muted">先选一下范围，我来出题～</p>
+        <a class="btn btn-primary btn-block" href="#/restart/${owner}">🔄 去重新开始</a>
+        <a class="btn btn-outline btn-block" href="#/">🏠 回首页</a>
       </main>
     </div>
   `);
@@ -611,10 +627,12 @@ function renderReviewDone(owner, total) {
         <h1>${esc(store.ownerName(owner))}</h1>
       </header>
       <main class="content center-box">
-        <p class="done-title">本计划已完成</p>
-        <p class="muted">${total} / ${total}</p>
-        <a class="btn btn-primary btn-block" href="#/restart/${owner}">重新开始</a>
-        <a class="btn btn-outline btn-block" href="#/">回首页</a>
+        <div class="done-emoji">🎉</div>
+        <p class="done-title">全部复习完啦！</p>
+        <p class="done-sub">${total} / ${total} 张</p>
+        <p class="muted small">太厉害了，给自己鼓个掌吧 👏</p>
+        <a class="btn btn-primary btn-block" href="#/restart/${owner}">🔄 再来一轮</a>
+        <a class="btn btn-outline btn-block" href="#/">🏠 回首页</a>
       </main>
     </div>
   `);
@@ -631,9 +649,9 @@ export async function renderBackup() {
         <h1>备份与恢复</h1>
       </header>
       <main class="content form">
-        <p class="notice">数据保存在这台手机上。清除浏览器数据会全部丢失，换手机前请先导出。</p>
-        <button class="btn btn-primary btn-block" id="btn-export" type="button">导出备份文件</button>
-        <button class="btn btn-outline btn-block" id="btn-import" type="button">从备份文件恢复</button>
+        <p class="notice">💾 数据保存在这台手机上。清除浏览器数据会全部丢失，换手机前请先导出。</p>
+        <button class="btn btn-primary btn-block" id="btn-export" type="button">📤 导出备份文件</button>
+        <button class="btn btn-outline btn-block" id="btn-import" type="button">📥 从备份文件恢复</button>
         <p class="muted small">上次导出：${lastExport ? esc(fmtTime(lastExport)) : '从未导出'}</p>
         <input type="file" id="backup-file" accept="application/json,.json" hidden>
       </main>
@@ -697,13 +715,13 @@ function openHandwriting() {
     layer.innerHTML = `
       <div class="hw-bar">
         <button class="btn btn-outline" data-act="cancel" type="button">✕ 取消</button>
-        <span class="hw-title">手写</span>
+        <span class="hw-title">✍️ 手写</span>
       </div>
       <canvas class="hw-canvas"></canvas>
       <div class="hw-actions">
-        <button class="btn btn-outline" data-act="undo" type="button">撤销</button>
-        <button class="btn btn-outline" data-act="clear" type="button">清空</button>
-        <button class="btn btn-primary" data-act="done" type="button" disabled>完成</button>
+        <button class="btn btn-outline" data-act="undo" type="button">↩️ 撤销</button>
+        <button class="btn btn-outline" data-act="clear" type="button">🧽 清空</button>
+        <button class="btn btn-primary" data-act="done" type="button" disabled>✅ 完成</button>
       </div>`;
     document.body.appendChild(layer);
 
